@@ -313,13 +313,13 @@
     <div class="layout">
       <div class="sidebar">
         <div class="add-panel">
-          <h2>Add a new point</h2>
+          <h2>Add a new business</h2>
           <div class="field">
             <label>Title</label
             ><input
               type="text"
               id="inputTitle"
-              placeholder="e.g. Central Park"
+              placeholder="e.g. Ben's Cool Small Business"
             />
           </div>
           <div class="field">
@@ -357,33 +357,59 @@
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
     <script>
-      const SUPABASE_URL = 'https://vmxmhyhpxmhiwuzpmkzv.supabase.co';
-      const SUPABASE_KEY = 'sb_publishable__UrTW702y4PCYZxIy1hfFA_6Lgbnn3h';
-      const HEADERS = { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY };
+      const SUPABASE_URL = "https://vmxmhyhpxmhiwuzpmkzv.supabase.co";
+      const SUPABASE_KEY = "sb_publishable__UrTW702y4PCYZxIy1hfFA_6Lgbnn3h";
+      const HEADERS = {
+        "Content-Type": "application/json",
+        apikey: SUPABASE_KEY,
+        Authorization: "Bearer " + SUPABASE_KEY,
+      };
 
       async function dbGetAll() {
-        const res = await fetch(SUPABASE_URL + '/rest/v1/points?select=*&order=created_at.asc', { headers: HEADERS });
+        const res = await fetch(
+          SUPABASE_URL + "/rest/v1/points?select=*&order=created_at.asc",
+          { headers: HEADERS },
+        );
         if (!res.ok) throw new Error(await res.text());
         return res.json();
       }
-      async function dbInsert(point) {
-        const res = await fetch(SUPABASE_URL + '/rest/v1/points', { method: 'POST', headers: { ...HEADERS, 'Prefer': 'return=representation' }, body: JSON.stringify(point) });
+      async function dbInsert(business) {
+        const res = await fetch(SUPABASE_URL + "/rest/v1/points", {
+          method: "POST",
+          headers: { ...HEADERS, Prefer: "return=representation" },
+          body: JSON.stringify(business),
+        });
         if (!res.ok) throw new Error(await res.text());
         return (await res.json())[0];
       }
       async function dbDelete(id) {
-        const res = await fetch(SUPABASE_URL + '/rest/v1/points?id=eq.' + id, { method: 'DELETE', headers: HEADERS });
+        const res = await fetch(SUPABASE_URL + "/rest/v1/points?id=eq." + id, {
+          method: "DELETE",
+          headers: HEADERS,
+        });
         if (!res.ok) throw new Error(await res.text());
       }
 
-      const map = L.map('map').setView([20, 0], 2);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>', maxZoom: 19 }).addTo(map);
+      const map = L.map("map").setView([20, 0], 2);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution:
+          '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+        maxZoom: 19,
+      }).addTo(map);
 
-      const makeIcon = (active) => L.divIcon({
-        className: '',
-        html: '<div style="width:18px;height:18px;background:' + (active ? '#c8442a' : '#2a6496') + ';border:2px solid ' + (active ? '#a8381f' : '#1a4a70') + ';border-radius:50% 50% 50% 0;transform:rotate(-45deg);box-shadow:2px 2px 4px rgba(0,0,0,0.3);"></div>',
-        iconSize: [18, 18], iconAnchor: [9, 18], popupAnchor: [0, -20]
-      });
+      const makeIcon = (active) =>
+        L.divIcon({
+          className: "",
+          html:
+            '<div style="width:18px;height:18px;background:' +
+            (active ? "#c8442a" : "#2a6496") +
+            ";border:2px solid " +
+            (active ? "#a8381f" : "#1a4a70") +
+            ';border-radius:50% 50% 50% 0;transform:rotate(-45deg);box-shadow:2px 2px 4px rgba(0,0,0,0.3);"></div>',
+          iconSize: [18, 18],
+          iconAnchor: [9, 18],
+          popupAnchor: [0, -20],
+        });
 
       const businesses = [];
       let activeId = null;
@@ -391,53 +417,94 @@
       async function loadBusinesses() {
         try {
           const rows = await dbGetAll();
-          rows.forEach(row => addMarker(row));
+          rows.forEach((row) => addMarker(row));
           renderCards();
-          if (rows.length > 0) map.fitBounds(L.latLngBounds(rows.map(r => [r.lat, r.lng])), { padding: [40, 40] });
-        } catch(e) {
-          document.getElementById('cardList').innerHTML = '<div class="empty-state">Could not load businesses.<br>' + e.message + '</div>';
-          document.getElementById('countBadge').textContent = 'error';
+          if (rows.length > 0)
+            map.fitBounds(L.latLngBounds(rows.map((r) => [r.lat, r.lng])), {
+              padding: [40, 40],
+            });
+        } catch (e) {
+          document.getElementById("cardList").innerHTML =
+            '<div class="empty-state">Could not load businesses.<br>' +
+            e.message +
+            "</div>";
+          document.getElementById("countBadge").textContent = "error";
         }
       }
 
       function addMarker(row) {
-        const marker = L.marker([row.lat, row.lng], { icon: makeIcon(false) }).addTo(map)
-          .bindPopup('<div class="popup-title">' + esc(row.title) + '</div><div class="popup-addr">' + esc(row.address) + '</div>' + (row.info ? '<div class="popup-info">' + esc(row.info) + '</div>' : ''), { className: 'custom-popup', maxWidth: 240 });
-        marker.on('click', () => setActive(row.id));
+        const marker = L.marker([row.lat, row.lng], { icon: makeIcon(false) })
+          .addTo(map)
+          .bindPopup(
+            '<div class="popup-title">' +
+              esc(row.title) +
+              '</div><div class="popup-addr">' +
+              esc(row.address) +
+              "</div>" +
+              (row.info
+                ? '<div class="popup-info">' + esc(row.info) + "</div>"
+                : ""),
+            { className: "custom-popup", maxWidth: 240 },
+          );
+        marker.on("click", () => setActive(row.id));
         businesses.push({ ...row, marker });
       }
 
       async function geocode(address) {
-        const res = await fetch('https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(address) + '&limit=1', { headers: { 'Accept-Language': 'en' } });
+        const res = await fetch(
+          "https://nominatim.openstreetmap.org/search?format=json&q=" +
+            encodeURIComponent(address) +
+            "&limit=1",
+          { headers: { "Accept-Language": "en" } },
+        );
         const data = await res.json();
         if (!data.length) return null;
         return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
       }
 
       async function addBusiness() {
-        const title = document.getElementById('inputTitle').value.trim();
-        const address = document.getElementById('inputAddress').value.trim();
-        const info = document.getElementById('inputInfo').value.trim();
-        const errEl = document.getElementById('errorMsg');
-        const btn = document.getElementById('addBtn');
-        if (!title) { errEl.textContent = 'Please enter a title.'; return; }
-        if (!address) { errEl.textContent = 'Please enter an address.'; return; }
-        errEl.textContent = '';
+        const title = document.getElementById("inputTitle").value.trim();
+        const address = document.getElementById("inputAddress").value.trim();
+        const info = document.getElementById("inputInfo").value.trim();
+        const errEl = document.getElementById("errorMsg");
+        const btn = document.getElementById("addBtn");
+        if (!title) {
+          errEl.textContent = "Please enter a title.";
+          return;
+        }
+        if (!address) {
+          errEl.textContent = "Please enter an address.";
+          return;
+        }
+        errEl.textContent = "";
         btn.disabled = true;
-        showOverlay('Looking up address…');
+        showOverlay("Looking up address…");
         const geo = await geocode(address);
-        if (!geo) { hideOverlay(); btn.disabled = false; errEl.textContent = 'Address not found. Try something more specific.'; return; }
-        showOverlay('Saving to database…');
+        if (!geo) {
+          hideOverlay();
+          btn.disabled = false;
+          errEl.textContent = "Address not found. Try something more specific.";
+          return;
+        }
+        showOverlay("Saving to database…");
         try {
-          const row = await dbInsert({ title, address, info: info || null, lat: geo.lat, lng: geo.lng });
+          const row = await dbInsert({
+            title,
+            address,
+            info: info || null,
+            lat: geo.lat,
+            lng: geo.lng,
+          });
           addMarker(row);
           renderCards();
           setActive(row.id);
           map.flyTo([geo.lat, geo.lng], 14, { animate: true });
-          document.getElementById('inputTitle').value = '';
-          document.getElementById('inputAddress').value = '';
-          document.getElementById('inputInfo').value = '';
-        } catch(e) { errEl.textContent = 'Save failed: ' + e.message; }
+          document.getElementById("inputTitle").value = "";
+          document.getElementById("inputAddress").value = "";
+          document.getElementById("inputInfo").value = "";
+        } catch (e) {
+          errEl.textContent = "Save failed: " + e.message;
+        }
         hideOverlay();
         btn.disabled = false;
       }
@@ -446,54 +513,100 @@
         e.stopPropagation();
         try {
           await dbDelete(id);
-          const idx = businesses.findIndex(p => p.id === id);
-          if (idx !== -1) { map.removeLayer(businesses[idx].marker); businesses.splice(idx, 1); }
+          const idx = businesses.findIndex((b) => b.id === id);
+          if (idx !== -1) {
+            map.removeLayer(businesses[idx].marker);
+            businesses.splice(idx, 1);
+          }
           if (activeId === id) activeId = null;
           renderCards();
-        } catch(e) { alert('Delete failed: ' + e.message); }
+        } catch (e) {
+          alert("Delete failed: " + e.message);
+        }
       }
 
       function setActive(id) {
-        if (activeId !== null) { const old = businesses.find(p => p.id === activeId); if (old) old.marker.setIcon(makeIcon(false)); }
+        if (activeId !== null) {
+          const old = businesses.find((b) => b.id === activeId);
+          if (old) old.marker.setIcon(makeIcon(false));
+        }
         activeId = id;
-        const biz = businesses.find(p => p.id === id);
+        const biz = businesses.find((b) => b.id === id);
         if (!biz) return;
         biz.marker.setIcon(makeIcon(true));
         biz.marker.openPopup();
         renderCards();
-        const card = document.getElementById('card-' + id);
-        if (card) card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        const card = document.getElementById("card-" + id);
+        if (card) card.scrollIntoView({ behavior: "smooth", block: "nearest" });
       }
 
       function flyTo(id) {
-        const biz = businesses.find(p => p.id === id);
+        const biz = businesses.find((b) => b.id === id);
         if (!biz) return;
         map.flyTo([biz.lat, biz.lng], 15, { duration: 1 });
-        setActive(id);
-      });
         setActive(id);
       }
 
       function renderCards() {
-        const list = document.getElementById('cardList');
-        document.getElementById('countBadge').textContent = businesses.length + ' point' + (businesses.length !== 1 ? 's' : '');
-        if (!businesses.length) { list.innerHTML = '<div class="empty-state">No businesses yet.<br>Add one above to get started.</div>'; return; }
-        list.innerHTML = businesses.map(p =>
-          '<div class="business-card ' + (p.id === activeId ? 'active' : '') + '" id="card-' + p.id + '" onclick="flyTo(' + p.id + ')">' +
-          '<button class="delete-btn" onclick="deleteBusiness(' + p.id + ', event)" title="Remove">✕</button>' +
-          '<div class="card-title">' + esc(p.title) + '</div>' +
-          '<div class="card-addr">' + esc(p.address) + '</div>' +
-          (p.info ? '<div class="card-info">' + esc(p.info) + '</div>' : '') +
-          '</div>'
-        ).join('');
+        const list = document.getElementById("cardList");
+        document.getElementById("countBadge").textContent =
+          businesses.length +
+          " business" +
+          (businesses.length !== 1 ? "es" : "");
+        if (!businesses.length) {
+          list.innerHTML =
+            '<div class="empty-state">No businesses yet.<br>Add one above to get started.</div>';
+          return;
+        }
+        list.innerHTML = businesses
+          .map(
+            (b) =>
+              '<div class="business-card ' +
+              (b.id === activeId ? "active" : "") +
+              '" id="card-' +
+              b.id +
+              '" onclick="flyTo(' +
+              b.id +
+              ')">' +
+              '<button class="delete-btn" onclick="deleteBusiness(' +
+              b.id +
+              ', event)" title="Remove">✕</button>' +
+              '<div class="card-title">' +
+              esc(b.title) +
+              "</div>" +
+              '<div class="card-addr">' +
+              esc(b.address) +
+              "</div>" +
+              (b.info
+                ? '<div class="card-info">' + esc(b.info) + "</div>"
+                : "") +
+              "</div>",
+          )
+          .join("");
       }
 
-      function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-      function showOverlay(msg) { document.getElementById('loadingMsg').textContent = msg; document.getElementById('loadingOverlay').classList.add('show'); }
-      function hideOverlay() { document.getElementById('loadingOverlay').classList.remove('show'); }
+      function esc(s) {
+        return (s || "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;");
+      }
+      function showOverlay(msg) {
+        document.getElementById("loadingMsg").textContent = msg;
+        document.getElementById("loadingOverlay").classList.add("show");
+      }
+      function hideOverlay() {
+        document.getElementById("loadingOverlay").classList.remove("show");
+      }
 
-      document.getElementById('inputTitle').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('inputAddress').focus(); });
-      document.getElementById('inputAddress').addEventListener('keydown', e => { if (e.key === 'Enter') addPoint(); });
+      document.getElementById("inputTitle").addEventListener("keydown", (e) => {
+        if (e.key === "Enter") document.getElementById("inputAddress").focus();
+      });
+      document
+        .getElementById("inputAddress")
+        .addEventListener("keydown", (e) => {
+          if (e.key === "Enter") addBusiness();
+        });
 
       loadBusinesses();
     </script>
